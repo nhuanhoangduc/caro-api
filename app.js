@@ -1,20 +1,26 @@
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
+const express = require('express');
+const cookieParser = require('cookie-parser');
+const logger = require('morgan');
+const bodyParser = require("body-parser");
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
+const Socket = require('./socket');
 
-var app = express();
+const userRouters = require('./routers/userRouters');
+const roomRouters = require('./routers/roomRouters');
+
+const app = express();
+
+// Set socket io 
+Socket.init(app);
 
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
+app.use('/users', userRouters);
+app.use('/rooms', roomRouters);
 
 module.exports = app;
