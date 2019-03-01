@@ -2,6 +2,7 @@ const express = require('express');
 const hyperid = require('hyperid');
 const _ = require('lodash');
 
+const socket = require('../socket');
 const UserModel = require('database/models/UserModel');
 const ScoreModel = require('database/models/ScoreModel');
 
@@ -19,8 +20,8 @@ router.post('/join', async (req, res, next) => {
         if (availableRoomsCounter === 0) { // Create new room
             const roomId = instance();
             availableRooms[roomId] = userId;
+            socket.joinRoom(roomId, userId);
             res.json({
-                isNewRoomCreated: true,
                 roomId: roomId,
             });
         } else {
@@ -29,8 +30,8 @@ router.post('/join', async (req, res, next) => {
             const secondUserId = userId;
             
             const [firstUserInfo, secondUserInfo] = await Promise.all([
-                await UserModel.findOne({ _id: firstUserId, }),
-                await UserModel.findOne({ _id: secondUserId, })
+                UserModel.findOne({ _id: firstUserId, }),
+                UserModel.findOne({ _id: secondUserId, }),
             ]); 
 
             let score = await ScoreModel.findOne({
@@ -50,17 +51,24 @@ router.post('/join', async (req, res, next) => {
             delete availableRooms[roomId];
 
             res.json({
-                isNewRoomCreated: false,
                 roomId: roomId,
-                score: score,
-                firstUser: firstUserInfo,
-                secondUser: secondUserInfo,
+            });
+
+            socket.joinRoom(roomId, userId);
+            socket.broadcastRoom(roomId, 'join', {
+                roomId: roomId,
+                firstUserScore: score.firstUserInfo,
+                secondUserScore: score.secondUserScore,
+                firstUserInfo: firstUserInfo,
+                secondUserInfo: secondUserInfo,
+                foregoerId: firstUserId,
             });
         }
     } catch (error) {
         next(error);
     }
 });
+
 
 
 module.exports = router;
